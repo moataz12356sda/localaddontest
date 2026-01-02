@@ -40,6 +40,7 @@ INTERNAL_BACKUP_DATABASE_NAME = config.get('internal_backup_database_name', 'def
 INTERNAL_DATABASE_NAME = config.get('internal_database_name', 'default_internal_db')
 DATABASE_IP = config.get('database_ip', '127.0.0.1')
 measurement = config.get('measurement', 'default_measurement')
+port = config.get('port', '2000')
 
 def ConvertKSA(packet):
     hour = packet[46:48]
@@ -410,6 +411,7 @@ class EchoServer(asyncore.dispatcher):
         handler = EchoHandler(sock)
 
 
-server = EchoServer('', 2000)
+server = EchoServer('', port)
 asyncore.loop()
+
 
