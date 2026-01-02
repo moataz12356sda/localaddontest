@@ -22,5 +22,3 @@ RUN pip install PyCRC-Hex
 
 
 CMD ["python3" , "./main.py"]
-
-
