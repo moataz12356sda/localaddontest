@@ -1,7 +1,7 @@
 {
-  "name": "lascarlocaladdon",
+  "name": "newlocaladdon22",
   "version": "1.0",
-  "slug": "lascarlocaladdon",
+  "slug": "newlocaladdon22",
   "description": "localdatabase v2 gateway on local database home assistant",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
   "startup": "application",
@@ -32,3 +32,4 @@
   "host_network" : true ,
   "hassio_api": true
 }
+
