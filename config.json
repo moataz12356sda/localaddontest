@@ -12,6 +12,7 @@
     "internal_backup_database_name": "!secret internal_backup_database_name",
     "internal_database_name": "!secret internal_database_name",
     "database_ip": "!secret database_ip",
+    "port":"2000",
     "measurement": "!secret measurement"},
   "schema": {
     "database_port": "str",
@@ -20,7 +21,8 @@
     "internal_backup_database_name": "str",
     "internal_database_name": "str",
     "database_ip": "str",
-    "measurement": "str"
+    "measurement": "str",
+    "port":"int"
   },
   "ports": {
     "2000/tcp": 2000
@@ -32,4 +34,5 @@
   "host_network" : true ,
   "hassio_api": true
 }
+
 
