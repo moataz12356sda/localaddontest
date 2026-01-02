@@ -6,7 +6,7 @@ from datetime import datetime
 import paho.mqtt.client as mqtt
 import socket
 from datetime import date
-from dateutil.relativedelta import relativedelta
+
 from influxdb import InfluxDBClient
 
 # import PyCRC
@@ -16,40 +16,36 @@ from influxdb import InfluxDBClient
 # from influxdb_client.client.write_api import SYNCHRONOUS #Token
 full_packet_list = []
 ServerActive = True
-Serverip = '185.222.242.249'
+Serverip = 'iot.skarpt.net'
+# Serverip ='192.168.1.174'
 Serverport = 5029
-broker_address = "192.168.0.107"
+broker_address = "192.168.1.10"
 broker_port = 1883
 responsePacket = ''
 response2 = ''
-# INTERNAL_DATABASE_NAME = "example"
-# INTERNAL_BACKUP_DATABASE_NAME = "Hold"
-# USERNAME_DATABASE = "home"
-# PASSWORD_DATABASE = "home"
-# DATABASE_IP = '192.168.0.100'
-# measurement = "Tzone"
-
-with open('/data/options.json', 'r') as config_file:    config = json.load(config_file)
-DATABASE_PORT = config.get('database_port', '8086')  # Default to '8086' if not set
-USERNAME_DATABASE = config.get('username_database', 'default_username')
-PASSWORD_DATABASE = config.get('password_database', 'default_password')
-INTERNAL_BACKUP_DATABASE_NAME = config.get('internal_backup_database_name', 'default_backup_db')
-INTERNAL_DATABASE_NAME = config.get('internal_database_name', 'default_internal_db')
-DATABASE_IP = config.get('database_ip', '127.0.0.1')
-measurement = config.get('measurement', 'default_measurement')
+INTERNAL_DATABASE_NAME = "skarpt"
+INTERNAL_BACKUP_DATABASE_NAME = "Hold"
+USERNAME_DATABASE = "skarpt"
+PASSWORD_DATABASE = "skarpt"
+DATABASE_IP = '192.168.1.10'
+measurement = "Tzone"
+DATABASE_PORT = 8086
 
 
-# DATABASE_PORT = '8086'
-# USERNAME_DATABASE = str(open("config/USERNAME_DATABASE.txt", "r").read()).strip()
-# PASSWORD_DATABASE = str(open("config/PASSWORD_DATABASE.txt", "r").read()).strip()
-# INTERNAL_BACKUP_DATABASE_NAME = str(open("config/INTERNAL_BACKUP_DATABASE_NAME.txt", "r").read()).strip()
-# INTERNAL_DATABASE_NAME = str(open("config/INTERNAL_DATABASE_NAME.txt", "r").read()).strip()
-# DATABASE_IP = str(open("config/DATABASE_IP.txt", "r").read()).strip()
-# measurement = str(open("config/measurement.txt", "r").read()).strip()
+# with open('/data/options.json', 'r') as config_file:    config = json.load(config_file)
+# DATABASE_PORT = config.get('database_port', '8086')  # Default to '8086' if not set
+# USERNAME_DATABASE = config.get('username_database', 'default_username')
+# PASSWORD_DATABASE = config.get('password_database', 'default_password')
+# INTERNAL_BACKUP_DATABASE_NAME = config.get('internal_backup_database_name', 'default_backup_db')
+# INTERNAL_DATABASE_NAME = config.get('internal_database_name', 'default_internal_db')
+# DATABASE_IP = config.get('database_ip', '127.0.0.1')
+# measurement = config.get('measurement', 'default_measurement')
+
 def ConvertKSA(packet):
     hour = packet[46:48]
     print(int(hour, 16))
-    newtime = str(hex(int(hour, 16) + 1)).replace("0x", "")
+    h = int(hour, 16)
+    newtime = str(hex(int(hour, 16))).replace("0x", "")
     if len(newtime) == 1:
         newtime = "0" + newtime
     newpacket = packet[:46] + newtime + packet[48:]
@@ -62,7 +58,6 @@ def Checked_SavedHolding_Database():
     result = client.query('SELECT *  FROM ' + str(INTERNAL_BACKUP_DATABASE_NAME) + '."autogen".' + str(measurement))
     length = len(list(result.get_points()))
     if length != 0:
-        print("hold data length ", length)
         return True
     else:
         return False
@@ -125,7 +120,6 @@ def SendPacketToServer(packet):
     packet = ConvertKSA(packet)
     if ServerActive:
         try:
-            print("sending to skarpt server")
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect((Serverip, Serverport))
             s.send(binascii.unhexlify(packet))
@@ -155,13 +149,13 @@ def mqttsend(jsonlist, sensoridlist):
 
 
 def Update_ACK(Packetindex):
-    print("updating ack")
     global responsePacket, response2
     # str = '@CMD,*000000,@ACK,'+Packetindex+'#,#'
     str1 = '@ACK,' + Packetindex + '#'
     str1 = str1.encode('utf-8')
     responsePacket = str1.hex()
-    dt = datetime.utcnow() - relativedelta(years=1)
+    now_utc = datetime.now()
+    dt = now_utc.replace(year=now_utc.year - 4)
     response2 = "Server UTC time:" + str(dt)[:19]
     response2 = response2.encode('utf-8')
     response2 = response2.hex()
@@ -169,8 +163,7 @@ def Update_ACK(Packetindex):
 
 def ConvertRTCtoTime(RTC):
     Year, Month, Day, Hours, Min, Sec = RTC[0:2], RTC[2:4], RTC[4:6], RTC[6:8], RTC[8:10], RTC[10:12]
-    Year, Month, Day, Hours, Min, Sec = int(Year, 16) + 1, int(Month, 16), int(Day, 16), int(Hours, 16), int(Min,
-                                                                                                             16), int(
+    Year, Month, Day, Hours, Min, Sec = int(Year, 16), int(Month, 16), int(Day, 16), int(Hours, 16), int(Min, 16), int(
         Sec, 16)
     print("Date is ", Year, "/", Month, "/", Day)
     print("Time is ", Hours, "/", Min, "/", Sec)
@@ -193,7 +186,7 @@ def TempFun(temp):
     if str(normalbit) == '0':
         pass
     else:
-        return 255
+        return "255"
 
     if str(postitive) == '0':
         sign = '+'
@@ -218,17 +211,14 @@ def HumFun(hum):
     if str(normalbit) == '0':
         pass
     else:
-        return 255
+        return "255"
     return str(int(value, 2))
 
 
 def logic(packet):
-    print("logic thread ...")
     if TestServerConnection():
-        print("skarpt server is active")
         SendPacketToServer(packet)
         if Checked_SavedHolding_Database():
-            print("sending hold data")
             threading.Thread(target=Send_Saved_Database, args=[]).start()
     else:
         SendPacketHoldingDataBase(packet)
@@ -236,8 +226,6 @@ def logic(packet):
 
 def ConvertPacketIntoElemets(packet):
     threading.Thread(target=logic, args=[packet]).start()
-
-    print("convert packet")
 
     sensorfound = False
     NumberOfSensors = 0
@@ -324,7 +312,8 @@ def BuildJsonDataBase(Date, Time, Temp, Hum, Battery, GateWayID, SensorID):
     listoftime = Time.split("/")
     Hour, Mins, Sec = listoftime
     Year = "20" + Year
-    ReadingTime = datetime(int(Year), int(Month), int(day), int(Hour), int(Mins), int(Sec)).isoformat() + "Z"
+    ReadingTime = datetime(int(Year)+4, int(Month), int(day), int(Hour), int(Mins), int(Sec)).isoformat() + "Z"
+    print("Reading time After Conversion Saved in influxdb = "+ReadingTime)
     JsonData = [
         {
             "measurement": measurement,
@@ -421,5 +410,5 @@ class EchoServer(asyncore.dispatcher):
         handler = EchoHandler(sock)
 
 
-server = EchoServer('', 9090)
+server = EchoServer('', 2000)
 asyncore.loop()
